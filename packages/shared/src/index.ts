@@ -30,3 +30,5 @@ export const isSet = (val: unknown): val is Set<any> =>
 export const toTypeString = (value: unknown): string =>
   objectToString.call(value)
 export const objectToString = Object.prototype.toString
+
+export const NOOP = () => {}
