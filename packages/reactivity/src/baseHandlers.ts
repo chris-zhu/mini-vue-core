@@ -1,5 +1,5 @@
 import { extend, hasChanged, hasOwn, isArray, isIntegerKey, isObject } from '@vue/shared'
-import { track, trigger } from './effect'
+import { track, trigger } from './effect2'
 import { TrackOpTypes, TriggerOpTypes } from './operations'
 import { reactive, readonly } from './reactive'
 
@@ -9,7 +9,7 @@ const readonlyGet = createGetter(true)
 const shallowReadonlyGet = createGetter(true, true)
 
 const set = createSetter()
-const shallowSet = createSetter(true)
+const shallowSet = createSetter()
 
 function createGetter(isReadonly = false, shallow = false) {
   return function get(target, key, receiver) {
@@ -31,7 +31,7 @@ function createGetter(isReadonly = false, shallow = false) {
   }
 }
 
-function createSetter(shallow = false) {
+function createSetter() {
   return function set(target, key, value, receiver) {
     const oldValue = target[key]
     const hadKey
@@ -43,7 +43,7 @@ function createSetter(shallow = false) {
     if (!hadKey) { // 新增
       trigger(target, TriggerOpTypes.ADD, key, value)
     } else if (hasChanged(value, oldValue)) { // 修改
-      trigger(target, TriggerOpTypes.SET, key, value, oldValue)
+      trigger(target, TriggerOpTypes.SET, key, value)
     }
 
     return result

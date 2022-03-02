@@ -9,32 +9,29 @@
 
   <body>
     <div id="app"></div>
-    <script src="../packages/reactivity/dist/reactivity.global.js"></script>
-    <script>
-      let {
-        reactive,
-        shallowReactive,
-        shallowReadonly,
-        readonly,
-        effect,
-        ref,
-        computed
-      } = VueReactivity
-      const a = ref(1)
-      const b = ref(2)
-      const c = computed(() => {
-        return a.value + b.value
-      })
+    <script type="module">
+      import {
+  effectScope, getCurrentScope
+} from '../packages/reactivity/dist/reactivity.esm-bundler.js'
 
-      const arr = reactive([1, 2, 3])
+const scope = effectScope()
 
-      effect(() => {
-        app.innerHTML = arr.toString()
-      })
+scope.run(() => {
+  console.log(1)
+  const scope0 = effectScope(true)
+  const scope1 = effectScope()
+  const scope2 = effectScope()
+  const scope4 = effectScope()
 
-      setTimeout(() => {
-        arr.length = 2
-      }, 1000)
-    </script>
+  scope2.run(() => {
+    effectScope()
+  })
+
+  // scope1.stop()
+})
+
+scope.stop()
+console.log(scope)
+          </script>
   </body>
 </html>

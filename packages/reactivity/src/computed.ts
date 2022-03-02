@@ -1,5 +1,5 @@
 import { isFunction } from '@vue/shared'
-import { effect, track, trigger } from './effect'
+import { effect, track, trigger } from './effect2'
 import { TrackOpTypes, TriggerOpTypes } from './operations'
 
 const NOOP = () => { }
@@ -9,6 +9,7 @@ class ComputedRefImpl {
   private _dirty = true
   public readonly __v_isRef = true
   private _value
+  public __v_isReadonly: boolean
 
   constructor(getter, private readonly setter, isReadonly) {
     this.effect = effect(getter, {

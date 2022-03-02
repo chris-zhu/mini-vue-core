@@ -1,26 +1,39 @@
-const isArray = Array.isArray;
-const isFunction = (val) => typeof val === 'function';
-const isString = (val) => typeof val === 'string';
-const isObject = (val) => val !== null && typeof val === 'object';
-const extend = Object.assign;
-const isIntegerKey = (key) => isString(key) &&
-    key !== 'NaN' &&
-    key[0] !== '-' &&
-    '' + parseInt(key, 10) === key;
-const hasOwnProperty = Object.prototype.hasOwnProperty;
-const hasOwn = (val, key) => hasOwnProperty.call(val, key);
-const hasChanged = (value, oldValue) => value !== oldValue && (value === value || oldValue === oldValue);
-const isMap = (val) => toTypeString(val) === '[object Map]';
-const toTypeString = (value) => objectToString.call(value);
-const objectToString = Object.prototype.toString;
+// src/base/index.ts
+var toTypeString = (v) => Object.prototype.toString.call(v);
+var isFunction = (val) => typeof val === "function";
+var isString = (val) => typeof val === "string";
+var isObject = (val) => val !== null && typeof val === "object";
+var isArray = Array.isArray;
+var isMap = (val) => toTypeString(val) === "[object Map]";
+var inBrowser = typeof window !== "undefined";
+var UA = inBrowser && window.navigator.userAgent.toLowerCase();
+UA && /msie|trident/.test(UA);
+UA && UA.indexOf("msie 9.0") > 0;
+var isEdge = UA && UA.indexOf("edge/") > 0;
+UA && /chrome\/\d+/.test(UA) && !isEdge;
+UA && /phantomjs/.test(UA);
+UA && UA.match(/firefox\/(\d+)/);
+var extend = Object.assign;
+var hasOwnProperty = Object.prototype.hasOwnProperty;
+var hasOwn = (val, key) => {
+  if (val == null)
+    return false;
+  return hasOwnProperty.call(val, key);
+};
+
+const isIntegerKey = (key) => isString(key)
+    && key !== 'NaN'
+    && key[0] !== '-'
+    && `${parseInt(key, 10)}` === key;
+const hasChanged = (value, oldValue) => value !== oldValue;
+const warn = console.warn;
 
 const ITERATE_KEY = Symbol('iterate');
 const MAP_KEY_ITERATE_KEY = Symbol('Map key iterate');
 function effect(fn, options = {}) {
     const effect = createReactiveEffect(fn, options);
-    if (!options.lazy) {
+    if (!options.lazy)
         effect();
-    }
     return effect;
 }
 let uid = 0;
@@ -66,24 +79,21 @@ const targetMap = new WeakMap();
  * }
  */
 function track(target, type, key) {
-    if (activeEffect === undefined) {
+    if (activeEffect === undefined)
         return;
-    }
     let depsMap = targetMap.get(target);
-    if (!depsMap) {
+    if (!depsMap)
         targetMap.set(target, (depsMap = new Map()));
-    }
     let dep = depsMap.get(key);
-    if (!dep) {
+    if (!dep)
         depsMap.set(key, (dep = new Set()));
-    }
     if (!dep.has(activeEffect)) {
         dep.add(activeEffect);
         activeEffect.deps.push(dep);
     }
     console.log(targetMap);
 }
-function trigger(target, type, key, newValue, oldvalue) {
+function trigger(target, type, key, newValue) {
     const depsMap = targetMap.get(target);
     // console.log(depsMap);
     if (!depsMap)
@@ -92,10 +102,9 @@ function trigger(target, type, key, newValue, oldvalue) {
     /** 将set里面的收集effect添加到effects中 */
     const add = (effectsToAdd) => {
         if (effectsToAdd) {
-            effectsToAdd.forEach(effect => {
-                if (effect !== activeEffect || effect.allowRecurse) {
+            effectsToAdd.forEach((effect) => {
+                if (effect !== activeEffect || effect.allowRecurse)
                     effects.add(effect);
-                }
             });
         }
     };
@@ -111,16 +120,15 @@ function trigger(target, type, key, newValue, oldvalue) {
     }
     else {
         // 可能是对象
-        if (key !== undefined) { // 这里肯定是修改   
+        if (key !== undefined) { // 这里肯定是修改
             add(depsMap.get(key)); // 不可能是添加  添加 depsMap.get(key) 返回是个undefined  因为还没有收集依赖
         }
         switch (type) {
             case "add" /* ADD */:
                 if (!isArray(target)) {
                     add(depsMap.get(ITERATE_KEY));
-                    if (isMap(target)) {
+                    if (isMap(target))
                         add(depsMap.get(MAP_KEY_ITERATE_KEY));
-                    }
                 }
                 else if (isIntegerKey(key)) {
                     // 添加了一个索引  触发长度更新
@@ -131,25 +139,21 @@ function trigger(target, type, key, newValue, oldvalue) {
             case "delete" /* DELETE */:
                 if (!isArray(target)) {
                     add(depsMap.get(ITERATE_KEY));
-                    if (isMap(target)) {
+                    if (isMap(target))
                         add(depsMap.get(MAP_KEY_ITERATE_KEY));
-                    }
                 }
                 break;
             case "set" /* SET */:
-                if (isMap(target)) {
+                if (isMap(target))
                     add(depsMap.get(ITERATE_KEY));
-                }
                 break;
         }
     }
     const run = (effect) => {
-        if (effect.options.scheduler) {
+        if (effect.options.scheduler)
             effect.options.scheduler(effect);
-        }
-        else {
+        else
             effect();
-        }
     };
     effects.forEach(run);
 }
@@ -159,7 +163,7 @@ const shallowGet = createGetter(false, true);
 const readonlyGet = createGetter(true);
 const shallowReadonlyGet = createGetter(true, true);
 const set = createSetter();
-const shallowSet = createSetter(true);
+const shallowSet = createSetter();
 function createGetter(isReadonly = false, shallow = false) {
     return function get(target, key, receiver) {
         const res = Reflect.get(target, key, receiver);
@@ -175,7 +179,7 @@ function createGetter(isReadonly = false, shallow = false) {
         return res;
     };
 }
-function createSetter(shallow = false) {
+function createSetter() {
     return function set(target, key, value, receiver) {
         const oldValue = target[key];
         const hadKey = isArray(target) && isIntegerKey(key)
@@ -200,14 +204,14 @@ const readonlyHandlers = {
     set(target, key) {
         console.warn(`Set operation on key "${String(key)}" failed: target is readonly.`, target);
         return true;
-    },
+    }
 };
 const shallowReactiveHandlers = extend({}, mutableHandlers, {
     get: shallowGet,
     set: shallowSet
 });
 const shallowReadonlyHandlers = extend({}, readonlyHandlers, {
-    get: shallowReadonlyGet,
+    get: shallowReadonlyGet
 });
 
 const reactiveMap = new WeakMap();
@@ -253,11 +257,15 @@ function createReactiveObject(target, isReadonly, baseHandlers) {
 function ref(value) {
     return createRef(value);
 }
+const convert = (val) => isObject(val) ? reactive(val) : val;
 class RefImpl {
+    _rawValue;
+    _shallow;
+    _value;
+    __v_isRef = true;
     constructor(_rawValue, _shallow = false) {
         this._rawValue = _rawValue;
         this._shallow = _shallow;
-        this.__v_isRef = true;
         this._value = _shallow ? _rawValue : convert(_rawValue);
     }
     get value() {
@@ -280,14 +288,17 @@ function createRef(rawValue, shallow = false) {
 function isRef(r) {
     return Boolean(r && r.__v_isRef === true);
 }
-const convert = (val) => isObject(val) ? reactive(val) : val;
 
 const NOOP = () => { };
 class ComputedRefImpl {
+    setter;
+    effect;
+    _dirty = true;
+    __v_isRef = true;
+    _value;
+    __v_isReadonly;
     constructor(getter, setter, isReadonly) {
         this.setter = setter;
-        this._dirty = true;
-        this.__v_isRef = true;
         this.effect = effect(getter, {
             lazy: true,
             scheduler: () => {
@@ -297,7 +308,7 @@ class ComputedRefImpl {
                 }
             }
         });
-        this['__v_isReadonly'] = isReadonly;
+        this.__v_isReadonly = isReadonly;
     }
     get value() {
         if (this._dirty) {
@@ -325,5 +336,88 @@ function computed(getterOrOptions) {
     return new ComputedRefImpl(getter, setter, isFunction(getterOrOptions) || !getterOrOptions.set);
 }
 
-export { computed, effect, reactive, readonly, ref, shallowReactive, shallowReadonly };
+let activeEffectScope;
+class EffectScope {
+    active = true;
+    effects = [];
+    cleanups = [];
+    parent;
+    scopes;
+    name;
+    index;
+    constructor(detached = false) {
+        if (!detached && activeEffectScope) {
+            this.parent = activeEffectScope;
+            this.index = (activeEffectScope.scopes || (activeEffectScope.scopes = [])).push(this) - 1;
+            this.name = `${this.parent ? `parent: ${this.parent.name}` : ''}scopeChild${this.index}`;
+        }
+    }
+    // 执行 作用域函数
+    run(fn) {
+        if (this.active) {
+            try {
+                activeEffectScope = this;
+                return fn();
+            }
+            finally {
+                activeEffectScope = this.parent;
+            }
+        }
+        else {
+            warn('cannot run an inactive effect scope.');
+        }
+    }
+    // 成为最新的activeEffectScope
+    on() {
+        activeEffectScope = this;
+    }
+    // activeEffectScope设为自己的父级作用域
+    off() {
+        activeEffectScope = this.parent;
+    }
+    // 停止 并且清除 子集的监听
+    stop(fromParent = false) {
+        if (this.active) {
+            let i, l;
+            // 清楚作用域内收集effect的监听
+            for (i = 0, l = this.effects.length; i < l; i++)
+                this.effects[i].stop();
+            //  cleanups 的清理
+            for (i = 0, l = this.cleanups.length; i < l; i++)
+                this.cleanups[i]();
+            // scope的stop
+            if (this.scopes) {
+                for (i = 0, l = this.scopes.length; i < l; i++)
+                    this.scopes[i].stop(true);
+            }
+            if (this.parent && !fromParent) {
+                const last = this.parent.scopes.pop();
+                if (last && last !== this) {
+                    this.parent.scopes[this.index] = last;
+                    last.index = this.index;
+                }
+            }
+            this.active = false;
+        }
+    }
+}
+function effectScope(detached) {
+    return new EffectScope(detached);
+}
+function recordEffectScope(effect, scope = activeEffectScope) {
+    if (scope && scope.active)
+        scope.effects.push(effect);
+}
+// 获取当前的scope
+function getCurrentScope() {
+    return activeEffectScope;
+}
+function onScopeDispose(fn) {
+    if (activeEffectScope)
+        activeEffectScope.cleanups.push(fn);
+    else
+        warn('onScopeDispose() is called when there is no active effect scope' + ' to be associated with.');
+}
+
+export { computed, effect, effectScope, getCurrentScope, onScopeDispose, reactive, readonly, recordEffectScope, ref, shallowReactive, shallowReadonly };
 //# sourceMappingURL=reactivity.esm-bundler.js.map

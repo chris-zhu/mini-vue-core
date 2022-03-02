@@ -1,6 +1,6 @@
 import { hasChanged, isArray, isObject } from '@vue/shared'
 import { reactive } from './reactive'
-import { track, trigger } from './effect'
+import { track, trigger } from './effect2'
 import { TrackOpTypes, TriggerOpTypes } from './operations'
 
 export function ref(value) {
