@@ -1,7 +1,7 @@
-import { extend, hasChanged, hasOwn, isArray, isIntegerKey, isObject } from "@vue/shared/src"
-import { track, trigger } from "./effect"
-import { TrackOpTypes, TriggerOpTypes } from "./operations"
-import { reactive, readonly } from "./reactive"
+import { extend, hasChanged, hasOwn, isArray, isIntegerKey, isObject } from '@vue/shared'
+import { track, trigger } from './effect'
+import { TrackOpTypes, TriggerOpTypes } from './operations'
+import { reactive, readonly } from './reactive'
 
 const get = createGetter()
 const shallowGet = createGetter(false, true)
@@ -10,7 +10,6 @@ const shallowReadonlyGet = createGetter(true, true)
 
 const set = createSetter()
 const shallowSet = createSetter(true)
-
 
 function createGetter(isReadonly = false, shallow = false) {
   return function get(target, key, receiver) {
@@ -34,10 +33,9 @@ function createGetter(isReadonly = false, shallow = false) {
 
 function createSetter(shallow = false) {
   return function set(target, key, value, receiver) {
-
     const oldValue = target[key]
-    const hadKey =
-      isArray(target) && isIntegerKey(key)
+    const hadKey
+      = isArray(target) && isIntegerKey(key)
         ? Number(key) < target.length
         : hasOwn(target, key)
     const result = Reflect.set(target, key, value, receiver)
@@ -65,7 +63,7 @@ export const readonlyHandlers = {
       target
     )
     return true
-  },
+  }
 }
 
 export const shallowReactiveHandlers = extend(
@@ -80,6 +78,6 @@ export const shallowReadonlyHandlers = extend(
   {},
   readonlyHandlers,
   {
-    get: shallowReadonlyGet,
+    get: shallowReadonlyGet
   }
 )

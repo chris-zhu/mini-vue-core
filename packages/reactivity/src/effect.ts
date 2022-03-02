@@ -1,15 +1,14 @@
-import { isArray, isIntegerKey, isMap } from "@vue/shared/src"
-import { TriggerOpTypes } from "./operations"
-
+import { isArray, isIntegerKey, isMap } from '@vue/shared'
+import { TriggerOpTypes } from './operations'
 
 export const ITERATE_KEY = Symbol('iterate')
 export const MAP_KEY_ITERATE_KEY = Symbol('Map key iterate')
 
 export function effect(fn, options: any = {}) {
   const effect = createReactiveEffect(fn, options)
-  if (!options.lazy) {
+  if (!options.lazy)
     effect()
-  }
+
   return effect
 }
 
@@ -18,7 +17,7 @@ const effectStack = []
 let activeEffect // 当前的effect
 
 function createReactiveEffect(fn, options) {
-  const effect = function () {
+  const effect = function() {
     if (!effectStack.includes(effect)) {
       /**
        * effect(()=>{
@@ -28,7 +27,7 @@ function createReactiveEffect(fn, options) {
        *    })
        *    console.log(state.c)  -->  这里必须保证当前effect为effect1 ，所以要出栈   effectStack.pop()
        * })
-       * 
+       *
        * */
       try {
         effectStack.push(effect)
@@ -58,29 +57,28 @@ const targetMap = new WeakMap()
  * }
  */
 export function track(target, type, key) {
-  if (activeEffect === undefined) {
+  if (activeEffect === undefined)
     return
-  }
+
   let depsMap = targetMap.get(target)
-  if (!depsMap) {
+  if (!depsMap)
     targetMap.set(target, (depsMap = new Map()))
-  }
+
   let dep = depsMap.get(key)
-  if (!dep) {
+  if (!dep)
     depsMap.set(key, (dep = new Set()))
-  }
+
   if (!dep.has(activeEffect)) {
     dep.add(activeEffect)
     activeEffect.deps.push(dep)
   }
-  console.log(targetMap);
-  
+  console.log(targetMap)
 }
 
 export function trigger(target, type, key?, newValue?, oldvalue?) {
   const depsMap = targetMap.get(target)
   // console.log(depsMap);
-  
+
   if (!depsMap) return
 
   const effects = new Set() // 将所有的 effect 存入一个集合中  会自动去重
@@ -88,10 +86,9 @@ export function trigger(target, type, key?, newValue?, oldvalue?) {
   /** 将set里面的收集effect添加到effects中 */
   const add = (effectsToAdd: Set<any>) => {
     if (effectsToAdd) {
-      effectsToAdd.forEach(effect => {
-        if (effect !== activeEffect || effect.allowRecurse) {
+      effectsToAdd.forEach((effect) => {
+        if (effect !== activeEffect || effect.allowRecurse)
           effects.add(effect)
-        }
       })
     }
   }
@@ -107,48 +104,43 @@ export function trigger(target, type, key?, newValue?, oldvalue?) {
     })
   } else {
     // 可能是对象
-    if (key !== undefined) { // 这里肯定是修改   
+    if (key !== undefined) { // 这里肯定是修改
       add(depsMap.get(key)) // 不可能是添加  添加 depsMap.get(key) 返回是个undefined  因为还没有收集依赖
     }
 
     switch (type) {
-      case TriggerOpTypes.ADD:
-        if (!isArray(target)) {
-          add(depsMap.get(ITERATE_KEY))
-          if (isMap(target)) {
-            add(depsMap.get(MAP_KEY_ITERATE_KEY))
-          }
-        } else if (isIntegerKey(key)) {
-          // 添加了一个索引  触发长度更新
-          // new index added to array -> length changes
-          add(depsMap.get('length'))
-        }
-        break
-      case TriggerOpTypes.DELETE:
-        if (!isArray(target)) {
-          add(depsMap.get(ITERATE_KEY))
-          if (isMap(target)) {
-            add(depsMap.get(MAP_KEY_ITERATE_KEY))
-          }
-        }
-        break
-      case TriggerOpTypes.SET:
-        if (isMap(target)) {
-          add(depsMap.get(ITERATE_KEY))
-        }
-        break
-    }
+    case TriggerOpTypes.ADD:
+      if (!isArray(target)) {
+        add(depsMap.get(ITERATE_KEY))
+        if (isMap(target))
+          add(depsMap.get(MAP_KEY_ITERATE_KEY))
+      } else if (isIntegerKey(key)) {
+        // 添加了一个索引  触发长度更新
+        // new index added to array -> length changes
+        add(depsMap.get('length'))
+      }
+      break
+    case TriggerOpTypes.DELETE:
+      if (!isArray(target)) {
+        add(depsMap.get(ITERATE_KEY))
+        if (isMap(target))
+          add(depsMap.get(MAP_KEY_ITERATE_KEY))
+      }
+      break
+    case TriggerOpTypes.SET:
+      if (isMap(target))
+        add(depsMap.get(ITERATE_KEY))
 
+      break
+    }
   }
 
   const run = (effect: any) => {
-    if (effect.options.scheduler) {
+    if (effect.options.scheduler)
       effect.options.scheduler(effect)
-    } else {
+    else
       effect()
-    }
   }
 
   effects.forEach(run)
-
 }

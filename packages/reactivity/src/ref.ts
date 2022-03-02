@@ -1,15 +1,14 @@
-import { hasChanged, isArray, isObject } from "@vue/shared/src"
-import { reactive } from "./reactive"
-import { track, trigger } from "./effect"
-import { TrackOpTypes, TriggerOpTypes } from "./operations"
-
-
+import { hasChanged, isArray, isObject } from '@vue/shared'
+import { reactive } from './reactive'
+import { track, trigger } from './effect'
+import { TrackOpTypes, TriggerOpTypes } from './operations'
 
 export function ref(value) {
   return createRef(value)
 }
 
-
+const convert = <T>(val: T): T =>
+  isObject(val) ? reactive(val as any) : val
 class RefImpl {
   private _value: any
   public readonly __v_isRef = true
@@ -36,6 +35,7 @@ class ObjectRefImpl {
   get value() {
     return this._object[this._key]
   }
+
   set value(newVal) {
     this._object[this._key] = newVal
   }
@@ -50,10 +50,6 @@ function isRef(r) {
   return Boolean(r && r.__v_isRef === true)
 }
 
-const convert = <T extends unknown>(val: T): T =>
-  isObject(val) ? reactive(val as any) : val
-
-
 export function toRef(object, key) {
   return isRef(object[key])
     ? object[key]
@@ -62,8 +58,9 @@ export function toRef(object, key) {
 
 export function toRefs(object) {
   const ret = isArray(object) ? new Array(object.length) : {}
-  for (const key in object) {
+  Object.keys(object).forEach((key) => {
     ret[key] = toRef(object, key)
-  }
+  })
+
   return ret
 }

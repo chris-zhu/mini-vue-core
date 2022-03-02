@@ -1,0 +1,18 @@
+{
+  "extends": [
+    "@chris-zhu"
+  ],
+  "rules": {
+    "@typescript-eslint/no-unused-vars": [
+      "error",
+      {
+        "argsIgnorePattern": "^_"
+      }
+    ],
+    "comma-dangle": [
+      2,
+      "never"
+    ],
+    "no-console": "off"
+  }
+}

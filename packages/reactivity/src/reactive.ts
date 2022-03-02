@@ -1,10 +1,10 @@
+import { isObject } from '@vue/shared'
 import {
   mutableHandlers,
   readonlyHandlers,
   shallowReactiveHandlers,
   shallowReadonlyHandlers
 } from './baseHandlers'
-import { isObject } from '@vue/shared'
 
 export const enum ReactiveFlags {
   SKIP = '__v_skip',
@@ -36,8 +36,6 @@ export function shallowReadonly(target: object) {
   return createReactiveObject(target, true, shallowReadonlyHandlers)
 }
 
-
-
 function createReactiveObject(target, isReadonly, baseHandlers) {
   if (!isObject(target)) return target
 
@@ -50,16 +48,14 @@ function createReactiveObject(target, isReadonly, baseHandlers) {
   // 放入Map映射中
   proxyMap.set(target, proxy)
   return proxy
-
 }
 
 // export function isReactive(value) {
 //   if()
 // }
 export function isReadonly(value) {
-  return !!(value && (value as Target)[ReactiveFlags.IS_READONLY])  
+  return !!(value && (value as Target)[ReactiveFlags.IS_READONLY])
 }
-
 
 // export function isReactive(value: unknown): boolean {
 //   if (isReadonly(value)) {

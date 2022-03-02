@@ -1,16 +1,14 @@
-import { isFunction } from "@vue/shared/src"
-import { effect, track, trigger } from "./effect"
-import { TrackOpTypes, TriggerOpTypes } from "./operations";
-
+import { isFunction } from '@vue/shared'
+import { effect, track, trigger } from './effect'
+import { TrackOpTypes, TriggerOpTypes } from './operations'
 
 const NOOP = () => { }
 
 class ComputedRefImpl {
   public readonly effect
   private _dirty = true
-  public readonly __v_isRef = true;
+  public readonly __v_isRef = true
   private _value
-
 
   constructor(getter, private readonly setter, isReadonly) {
     this.effect = effect(getter, {
@@ -22,7 +20,7 @@ class ComputedRefImpl {
         }
       }
     })
-    this['__v_isReadonly'] = isReadonly
+    this.__v_isReadonly = isReadonly
   }
 
   public get value() {
@@ -37,10 +35,7 @@ class ComputedRefImpl {
   public set value(newVal) {
     this.setter(newVal)
   }
-
-
 }
-
 
 export function computed(getterOrOptions) {
   let getter
