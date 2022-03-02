@@ -18,16 +18,17 @@ const scope = effectScope()
 
 scope.run(() => {
   console.log(1)
-  const scope0 = effectScope(true)
+  effectScope(true)
   const scope1 = effectScope()
   const scope2 = effectScope()
-  const scope4 = effectScope()
+  effectScope()
 
   scope2.run(() => {
     effectScope()
   })
 
-  // scope1.stop()
+  scope1.stop()
+  console.log(getCurrentScope())
 })
 
 scope.stop()

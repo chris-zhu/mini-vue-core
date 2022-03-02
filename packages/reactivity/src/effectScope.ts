@@ -12,6 +12,7 @@ export class EffectScope {
 
     private index: number | undefined
 
+    // detached 是否独立，当存在嵌套的scope时，决定是否挂到父节点下
     constructor(detached = false) {
       if (!detached && activeEffectScope) {
         this.parent = activeEffectScope
