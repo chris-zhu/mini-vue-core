@@ -5,13 +5,15 @@ import type { EffectScope } from './effectScope'
 
 export type EffectScheduler = (...args: any[]) => any
 
-let activeEffect: ReactiveEffect | undefined
+// let activeEffect: ReactiveEffect | undefined
 export class ReactiveEffect {
   active: true
   dep: []
   parent: ReactiveEffect | undefined = undefined
 
-  constructor(public fn: () => any, public schedeler: EffectScheduler | null = null, scope?: EffectScope) {
+  constructor(public fn: () => any,
+    public schedeler: EffectScheduler | null = null,
+    scope?: EffectScope) {
     recordEffectScope(this, scope)
   }
 
@@ -65,6 +67,7 @@ export interface ReactiveEffectRunner<T = any> {
 }
 
 export function effect<T=any>(fn: () => T, options?: ReactiveEffectOptions): ReactiveEffectRunner {
+  // 如果 fn 已经是响应式的函数
   if ((fn as ReactiveEffectRunner).effect)
     fn = (fn as ReactiveEffectRunner).effect.fn
 

@@ -30,7 +30,7 @@ const warn = console.warn;
 
 const ITERATE_KEY = Symbol('iterate');
 const MAP_KEY_ITERATE_KEY = Symbol('Map key iterate');
-function effect(fn, options = {}) {
+function effect$1(fn, options = {}) {
     const effect = createReactiveEffect(fn, options);
     if (!options.lazy)
         effect();
@@ -254,6 +254,134 @@ function createReactiveObject(target, isReadonly, baseHandlers) {
 //   return isReactive(value) || isReadonly(value)
 // }
 
+let activeEffectScope;
+class EffectScope {
+    active = true;
+    effects = [];
+    cleanups = [];
+    parent;
+    scopes;
+    index;
+    // detached 是否独立，当存在嵌套的scope时，决定是否挂到父节点下
+    constructor(detached = false) {
+        if (!detached && activeEffectScope) {
+            this.parent = activeEffectScope;
+            this.index = (activeEffectScope.scopes || (activeEffectScope.scopes = [])).push(this) - 1;
+        }
+    }
+    // 执行 作用域函数
+    run(fn) {
+        if (this.active) {
+            try {
+                activeEffectScope = this;
+                return fn();
+            }
+            finally {
+                activeEffectScope = this.parent;
+            }
+        }
+        else {
+            warn('cannot run an inactive effect scope.');
+        }
+    }
+    // 成为最新的activeEffectScope
+    on() {
+        activeEffectScope = this;
+    }
+    // activeEffectScope设为自己的父级作用域
+    off() {
+        activeEffectScope = this.parent;
+    }
+    // 停止 并且清除 子集的监听
+    stop(fromParent = false) {
+        if (this.active) {
+            let i, l;
+            // 清楚作用域内收集effect的监听
+            for (i = 0, l = this.effects.length; i < l; i++)
+                this.effects[i].stop();
+            //  cleanups 的清理
+            for (i = 0, l = this.cleanups.length; i < l; i++)
+                this.cleanups[i]();
+            // scope的stop
+            if (this.scopes) {
+                for (i = 0, l = this.scopes.length; i < l; i++)
+                    this.scopes[i].stop(true);
+            }
+            // fromParent = false(默认) 则会从 this.parent.scopes 移除当前的 scope， 并且释放他的内存
+            // fromParent = true 不会从 this.parent.scopes 断开父子关系的引用关系
+            if (this.parent && !fromParent) {
+                const last = this.parent.scopes.pop();
+                if (last && last !== this) {
+                    this.parent.scopes[this.index] = last;
+                    last.index = this.index;
+                }
+            }
+            this.active = false;
+        }
+    }
+}
+function effectScope(detached) {
+    return new EffectScope(detached);
+}
+// 将 effect 收集到对应的 scope中
+function recordEffectScope(effect, scope = activeEffectScope) {
+    if (scope && scope.active)
+        scope.effects.push(effect);
+}
+// 获取当前的scope
+function getCurrentScope() {
+    return activeEffectScope;
+}
+// scope 在停止前的回调
+function onScopeDispose(fn) {
+    if (activeEffectScope)
+        activeEffectScope.cleanups.push(fn);
+    else
+        warn('onScopeDispose() is called when there is no active effect scope' + ' to be associated with.');
+}
+
+// let activeEffect: ReactiveEffect | undefined
+class ReactiveEffect {
+    fn;
+    schedeler;
+    active;
+    dep;
+    parent = undefined;
+    constructor(fn, schedeler = null, scope) {
+        this.fn = fn;
+        this.schedeler = schedeler;
+        recordEffectScope(this, scope);
+    }
+    stop() {
+    }
+    run() {
+        // if (!this.active)
+        //   return this.fn()
+        // let parent: ReactiveEffect | undefined = activeEffect
+        // while (parent) {
+        //   if (parent === this)
+        //     return
+        //   parent = parent.parent
+        // }
+    }
+}
+function effect(fn, options) {
+    // 如果 fn 已经是响应式的函数
+    if (fn.effect)
+        fn = fn.effect.fn;
+    const _effect = new ReactiveEffect(fn);
+    if (options) {
+        extend(_effect, options);
+        if (options.scope)
+            recordEffectScope(_effect, options.scope);
+    }
+    if (!options || !options.lazy)
+        _effect.run();
+    const runner = _effect.run.bind(_effect);
+    runner.effect = _effect;
+    return runner;
+}
+
 function ref(value) {
     return createRef(value);
 }
@@ -299,7 +427,7 @@ class ComputedRefImpl {
     __v_isReadonly;
     constructor(getter, setter, isReadonly) {
         this.setter = setter;
-        this.effect = effect(getter, {
+        this.effect = effect$1(getter, {
             lazy: true,
             scheduler: () => {
                 if (!this._dirty) {
@@ -334,89 +462,6 @@ function computed(getterOrOptions) {
         setter = getterOrOptions.set;
     }
     return new ComputedRefImpl(getter, setter, isFunction(getterOrOptions) || !getterOrOptions.set);
-}
-
-let activeEffectScope;
-class EffectScope {
-    active = true;
-    effects = [];
-    cleanups = [];
-    parent;
-    scopes;
-    name;
-    index;
-    constructor(detached = false) {
-        if (!detached && activeEffectScope) {
-            this.parent = activeEffectScope;
-            this.index = (activeEffectScope.scopes || (activeEffectScope.scopes = [])).push(this) - 1;
-            this.name = `${this.parent ? `parent: ${this.parent.name}` : ''}scopeChild${this.index}`;
-        }
-    }
-    // 执行 作用域函数
-    run(fn) {
-        if (this.active) {
-            try {
-                activeEffectScope = this;
-                return fn();
-            }
-            finally {
-                activeEffectScope = this.parent;
-            }
-        }
-        else {
-            warn('cannot run an inactive effect scope.');
-        }
-    }
-    // 成为最新的activeEffectScope
-    on() {
-        activeEffectScope = this;
-    }
-    // activeEffectScope设为自己的父级作用域
-    off() {
-        activeEffectScope = this.parent;
-    }
-    // 停止 并且清除 子集的监听
-    stop(fromParent = false) {
-        if (this.active) {
-            let i, l;
-            // 清楚作用域内收集effect的监听
-            for (i = 0, l = this.effects.length; i < l; i++)
-                this.effects[i].stop();
-            //  cleanups 的清理
-            for (i = 0, l = this.cleanups.length; i < l; i++)
-                this.cleanups[i]();
-            // scope的stop
-            if (this.scopes) {
-                for (i = 0, l = this.scopes.length; i < l; i++)
-                    this.scopes[i].stop(true);
-            }
-            if (this.parent && !fromParent) {
-                const last = this.parent.scopes.pop();
-                if (last && last !== this) {
-                    this.parent.scopes[this.index] = last;
-                    last.index = this.index;
-                }
-            }
-            this.active = false;
-        }
-    }
-}
-function effectScope(detached) {
-    return new EffectScope(detached);
-}
-function recordEffectScope(effect, scope = activeEffectScope) {
-    if (scope && scope.active)
-        scope.effects.push(effect);
-}
-// 获取当前的scope
-function getCurrentScope() {
-    return activeEffectScope;
-}
-function onScopeDispose(fn) {
-    if (activeEffectScope)
-        activeEffectScope.cleanups.push(fn);
-    else
-        warn('onScopeDispose() is called when there is no active effect scope' + ' to be associated with.');
 }
 
 export { computed, effect, effectScope, getCurrentScope, onScopeDispose, reactive, readonly, recordEffectScope, ref, shallowReactive, shallowReadonly };
